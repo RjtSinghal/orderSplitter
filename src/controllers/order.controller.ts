@@ -2,15 +2,14 @@ import { Request, Response } from "express";
 import {
   calculateOrderSplit,
   StockAllocation,
-} from "../services/orderSplitter.service";
+} from "../services/order.service";
+import { SplitOrderRequestSchema } from "../validators/order.validator";
 import crypto from "crypto";
 
 // In-Memory Storage (will reset on server restart)
 const historicOrders: any[] = [];
 
-/**
- * Logic to ensure orders only execute Monday through Friday.
- */
+// Logic to ensure orders only execute Monday through Friday.
 const getNextTradingDay = (): string => {
   const date = new Date();
   const day = date.getDay();
@@ -20,21 +19,54 @@ const getNextTradingDay = (): string => {
   return date.toISOString();
 };
 
+// export const splitOrder = (req: Request, res: Response) => {
+//   try {
+//     const { portfolioId, orderType, totalAmount, allocations } = req.body;
+
+//     if (!totalAmount || !allocations || !Array.isArray(allocations)) {
+//       return res.status(400).json({
+//         error:
+//           "Invalid request payload. Ensure totalAmount and allocations are provided.",
+//       });
+//     }
+
+//     const splits = calculateOrderSplit(
+//       totalAmount,
+//       allocations as StockAllocation[],
+//     );
+//     const executionDate = getNextTradingDay();
+
+//     const orderRecord = {
+//       orderId: `ord_${crypto.randomBytes(6).toString("hex")}`,
+//       portfolioId,
+//       orderType,
+//       totalAmount,
+//       executionDate,
+//       splits,
+//       createdAt: new Date().toISOString(),
+//     };
+
+//     historicOrders.push(orderRecord);
+//     return res.status(200).json(orderRecord);
+//   } catch (error: any) {
+//     return res.status(422).json({ error: error.message });
+//   }
+// };
+
 export const splitOrder = (req: Request, res: Response) => {
+  const parsed = SplitOrderRequestSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Invalid request payload.",
+      details: parsed.error.flatten().fieldErrors,
+    });
+  }
+
+  const { portfolioId, orderType, totalAmount, allocations } = parsed.data;
+
   try {
-    const { portfolioId, orderType, totalAmount, allocations } = req.body;
-
-    if (!totalAmount || !allocations || !Array.isArray(allocations)) {
-      return res.status(400).json({
-        error:
-          "Invalid request payload. Ensure totalAmount and allocations are provided.",
-      });
-    }
-
-    const splits = calculateOrderSplit(
-      totalAmount,
-      allocations as StockAllocation[],
-    );
+    const splits = calculateOrderSplit(totalAmount, allocations);
     const executionDate = getNextTradingDay();
 
     const orderRecord = {
@@ -48,7 +80,7 @@ export const splitOrder = (req: Request, res: Response) => {
     };
 
     historicOrders.push(orderRecord);
-    return res.status(200).json(orderRecord);
+    return res.status(201).json(orderRecord);
   } catch (error: any) {
     return res.status(422).json({ error: error.message });
   }

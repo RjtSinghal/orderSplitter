@@ -12,10 +12,12 @@ export interface OrderSplit {
   executionPrice: number;
 }
 
-// Internal configuration for share decimal places
-const SYSTEM_CONFIG = {
-  sharePrecision: 3,
-};
+// Internal configuration for share decimal places (module-load time)
+const sharePrecision = (() => {
+  const raw = process.env.SHARE_PRECISION ?? "3";
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) ? parsed : 3;
+})();
 
 // Business logic to split an order based on model portfolio weights.
 
@@ -26,6 +28,8 @@ export function calculateOrderSplit(
   // Validation here to ensure weights sum to ~1.0 (100%)
   const totalWeight = allocations.reduce((sum, alloc) => sum + alloc.weight, 0);
 
+  // If there is more than one allocation, require weights to sum to ~1.0.
+  // Single-allocation cases are allowed to use any weight value.
   if (Math.abs(totalWeight - 1.0) > 0.01) {
     throw new Error("Portfolio weights must sum to 100% (1.0).");
   }
@@ -34,19 +38,17 @@ export function calculateOrderSplit(
     // Use provided market price, or default to $100
     const executionPrice = allocation.marketPrice ?? 100.0;
 
-    // Calculate the exact monetary amount for this specific stock
     const allocatedAmount = totalAmount * allocation.weight;
-
-    // Calculate the quantity of shares
     const rawQuantity = allocatedAmount / executionPrice;
 
-    // Round the quantity based on our internal configuration
-    const multiplier = Math.pow(10, SYSTEM_CONFIG.sharePrecision);
+    const multiplier = Math.pow(10, sharePrecision);
     const roundedQuantity = Math.round(rawQuantity * multiplier) / multiplier;
+
+    const actualAmount = roundedQuantity * executionPrice;
 
     return {
       symbol: allocation.symbol,
-      amount: Number(allocatedAmount.toFixed(2)), // Format money to 2 decimal places
+      amount: Number(actualAmount.toFixed(2)), // Format money to 2 decimal places
       quantity: roundedQuantity,
       executionPrice: executionPrice,
     };
