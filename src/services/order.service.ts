@@ -28,8 +28,6 @@ export function calculateOrderSplit(
   // Validation here to ensure weights sum to ~1.0 (100%)
   const totalWeight = allocations.reduce((sum, alloc) => sum + alloc.weight, 0);
 
-  // If there is more than one allocation, require weights to sum to ~1.0.
-  // Single-allocation cases are allowed to use any weight value.
   if (Math.abs(totalWeight - 1.0) > 0.01) {
     throw new Error("Portfolio weights must sum to 100% (1.0).");
   }
