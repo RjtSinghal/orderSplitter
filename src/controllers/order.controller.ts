@@ -19,40 +19,6 @@ const getNextTradingDay = (): string => {
   return date.toISOString();
 };
 
-// export const splitOrder = (req: Request, res: Response) => {
-//   try {
-//     const { portfolioId, orderType, totalAmount, allocations } = req.body;
-
-//     if (!totalAmount || !allocations || !Array.isArray(allocations)) {
-//       return res.status(400).json({
-//         error:
-//           "Invalid request payload. Ensure totalAmount and allocations are provided.",
-//       });
-//     }
-
-//     const splits = calculateOrderSplit(
-//       totalAmount,
-//       allocations as StockAllocation[],
-//     );
-//     const executionDate = getNextTradingDay();
-
-//     const orderRecord = {
-//       orderId: `ord_${crypto.randomBytes(6).toString("hex")}`,
-//       portfolioId,
-//       orderType,
-//       totalAmount,
-//       executionDate,
-//       splits,
-//       createdAt: new Date().toISOString(),
-//     };
-
-//     historicOrders.push(orderRecord);
-//     return res.status(200).json(orderRecord);
-//   } catch (error: any) {
-//     return res.status(422).json({ error: error.message });
-//   }
-// };
-
 export const splitOrder = (req: Request, res: Response) => {
   const parsed = SplitOrderRequestSchema.safeParse(req.body);
 
